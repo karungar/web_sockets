@@ -5,11 +5,18 @@ const cors = require('cors');
 const socketConfig = require('./config/socketConfig');
 const store = require('./models/inMemoryStore');
 const socketHandlers = require('./socket/socketHandlers');
+const WebSocket = require('ws'); 
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: socketConfig.corsOptions
+  cors: socketConfig.corsOptions,
+  connectionStateRecovery: true,
+  transports: ['websocket', 'polling']
+});
+
+io.on('connection', (socket) => {
+  console.log(`Client connected: ${socket.id}`);
 });
 
 // Initialize data stores

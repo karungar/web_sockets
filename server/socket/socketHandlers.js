@@ -1,4 +1,3 @@
-const authController = require('../controllers/authController');
 const roomController = require('../controllers/roomController');
 const messageController = require('../controllers/messageController');
 const userController = require('../controllers/userController');
@@ -8,8 +7,36 @@ module.exports = function socketHandlers(io, store) {
   io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    // Register controllers
-    authController(socket, io, store);
+    // Handle authentication directly in socket handler
+    socket.on('authenticate', ({ username, avatar }) => {
+      const user = {
+        id: socket.id,
+        username,
+        avatar,
+        isOnline: true,
+        lastSeen: new Date(),
+        currentRoom: 'general'
+      };
+      
+      // Add user to store
+      store.users.set(socket.id, user);
+      
+      // Join default room
+      socket.join('general');
+      
+      // Update room user list
+      const generalRoom = store.rooms.get('general');
+      if (generalRoom) {
+        generalRoom.users.add(socket.id);
+        updateRoomUsers(io, store, 'general');
+      }
+      
+      // Notify client and room
+      socket.emit('authenticated', user);
+      socket.to('general').emit('user_joined', user);
+    });
+
+    // Register other controllers
     roomController(socket, io, store);
     messageController(socket, io, store);
     userController(socket, io, store);

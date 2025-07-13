@@ -1,6 +1,6 @@
 module.exports = function authController(socket, io, store) {
   socket.on('authenticate', ({ username, avatar }) => {
-    const { users, rooms } = store;
+    const { users, rooms, messages } = store;
     const user = {
       id: socket.id,
       username,
@@ -14,13 +14,15 @@ module.exports = function authController(socket, io, store) {
     socket.join('general');
     
     const generalRoom = rooms.get('general');
-    generalRoom.users.add(socket.id);
+    if (generalRoom) {
+      generalRoom.users.add(socket.id);
+    }
     
     socket.emit('authenticated', user);
     socket.to('general').emit('user_joined', user);
     
-    // Send existing messages
-    const roomMessages = store.messages.get('general') || [];
+    // Get messages from messages store (not room object)
+    const roomMessages = messages.get('general') || [];
     socket.emit('room_messages', roomMessages);
   });
 };
