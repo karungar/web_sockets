@@ -1,8 +1,10 @@
 const { v4: uuidv4 } = require('uuid');
 
 module.exports = function messageController(socket, io, store) {
+  // Always access through store
+  const { users, messages } = store;
+
   socket.on('send_message', ({ roomId, content, type = 'text' }) => {
-    const { users, messages } = store;
     const user = users.get(socket.id);
     if (!user) return;
 
@@ -27,7 +29,6 @@ module.exports = function messageController(socket, io, store) {
   });
 
   socket.on('send_private_message', ({ recipientId, content }) => {
-    const { users } = store;
     const user = users.get(socket.id);
     const recipient = users.get(recipientId);
     if (!user || !recipient) return;
@@ -48,7 +49,7 @@ module.exports = function messageController(socket, io, store) {
     socket.to(recipientId).emit('private_message', message);
   });
 
-  // Message reactions
+  // Message reactions (fixed to use store)
   socket.on('add_reaction', ({ messageId, roomId, emoji }) => {
     const user = users.get(socket.id);
     if (!user) return;
@@ -77,38 +78,8 @@ module.exports = function messageController(socket, io, store) {
       reactions: message.reactions
     });
   });
-
-    // Message reactions
-  socket.on('add_reaction', ({ messageId, roomId, emoji }) => {
-    const user = users.get(socket.id);
-    if (!user) return;
-
-    const roomMessages = messages.get(roomId);
-    if (!roomMessages) return;
-
-    const message = roomMessages.find(msg => msg.id === messageId);
-    if (!message) return;
-
-    if (!message.reactions[emoji]) {
-      message.reactions[emoji] = [];
-    }
-
-    const existingReaction = message.reactions[emoji].find(r => r.userId === socket.id);
-    if (!existingReaction) {
-      message.reactions[emoji].push({
-        userId: socket.id,
-        username: user.username
-      });
-    }
-
-    io.to(roomId).emit('reaction_added', {
-      messageId,
-      emoji,
-      reactions: message.reactions
-    });
-  }); 
   
-   // Search messages
+  // Search messages (fixed to use store)
   socket.on('search_messages', ({ roomId, query }) => {
     const roomMessages = messages.get(roomId) || [];
     const searchResults = roomMessages.filter(msg => 
